@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.test.json",
+  "compilerOptions": {
+    "outDir": ".script-build",
+    "rootDir": "."
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "src/db/**/*.ts",
+    "src/domain/**/*.ts"
+  ]
+}

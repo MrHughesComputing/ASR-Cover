@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  COVER_MANAGER
+}
+
+enum PostStatus {
+  ACTIVE
+  VACANT
+  INACTIVE
+}
+
+enum Phase {
+  EYFS
+  PRIMARY
+  SECONDARY
+  CROSS_PHASE
+}
+
+enum RoleType {
+  EYFS_CLASS_TEACHER
+  PRIMARY_CLASS_TEACHER
+  SPECIALIST_TEACHER
+  SECONDARY_TEACHER
+  LEADERSHIP
+  SUPPORT
+  OTHER
+}
+
+enum CoverPriority {
+  HIGH
+  NORMAL
+  LOW
+  EMERGENCY_ONLY
+  EXEMPT
+}
+
+enum SchoolDay {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+}
+
+enum TimetableStatus {
+  TEACHING
+  REGISTRATION
+  AVAILABLE
+  LUNCH
+  MEETING
+  PPA
+  PROTECTED
+  CCA
+  OTHER_COMMITMENT
+  UNCLASSIFIED
+}
+
+enum CoverStatus {
+  COVERED
+  UNCOVERED
+  NO_COVER_REQUIRED
+  CONFLICT
+}
+
+enum AbsenceScope {
+  WHOLE_DAY
+  PART_DAY
+  SINGLE_PERIOD
+}
+
+model AppUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      UserRole @default(COVER_MANAGER)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditEvents      AuditEvent[]
+  coverAssignments CoverAssignment[] @relation("AssignedBy")
+}
+
+model Person {
+  id            String        @id @default(cuid())
+  firstName     String
+  lastName      String
+  displayName   String
+  email         String?       @unique
+  active        Boolean       @default(true)
+  startDate     DateTime?
+  endDate       DateTime?
+  coverEligible Boolean       @default(true)
+  coverPriority CoverPriority @default(NORMAL)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  postAssignments       PersonPostAssignment[]
+  registrationAssignments StaffRegistrationAssignment[]
+  timetableEntries      TimetableEntry[]
+  lunchAllocations      LunchAllocation[]
+  absences              Absence[]
+  coverAssignments      CoverAssignment[] @relation("CoveringPerson")
+  absentCoverAssignments CoverAssignment[] @relation("AbsentPerson")
+}
+
+model Post {
+  id            String        @id @default(cuid())
+  name          String
+  code          String?       @unique
+  status        PostStatus    @default(ACTIVE)
+  phase         Phase
+  roleType      RoleType
+  subject       String?
+  coverEligible Boolean       @default(true)
+  coverPriority CoverPriority @default(NORMAL)
+  exemptFromNormalCover Boolean @default(false)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  assignments      PersonPostAssignment[]
+  timetableEntries TimetableEntry[]
+}
+
+model PersonPostAssignment {
+  id        String   @id @default(cuid())
+  personId  String
+  postId    String
+  startDate DateTime
+  endDate   DateTime?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id])
+  post   Post   @relation(fields: [postId], references: [id])
+
+  @@index([personId, active])
+  @@index([postId, active])
+}
+
+model RegistrationGroup {
+  id          String @id @default(cuid())
+  code        String @unique
+  displayName String
+  phase       Phase
+  yearGroup   String?
+
+  assignments StaffRegistrationAssignment[]
+}
+
+model StaffRegistrationAssignment {
+  id                  String   @id @default(cuid())
+  personId            String
+  registrationGroupId String?
+  explicitlyNoRegistration Boolean @default(false)
+  startDate           DateTime
+  endDate             DateTime?
+  active              Boolean  @default(true)
+
+  person Person @relation(fields: [personId], references: [id])
+  registrationGroup RegistrationGroup? @relation(fields: [registrationGroupId], references: [id])
+}
+
+model SchoolPeriod {
+  id        String @id
+  label     String
+  dayOrder  Int
+  startTime String
+  endTime   String
+  coverRelevant Boolean @default(true)
+
+  timetableEntries TimetableEntry[]
+  coverAssignments CoverAssignment[]
+}
+
+model TimetableVersion {
+  id            String   @id @default(cuid())
+  name          String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  active        Boolean  @default(false)
+  importedAt    DateTime @default(now())
+  sourceName     String?
+
+  entries TimetableEntry[]
+}
+
+model TeachingEvent {
+  id        String @id @default(cuid())
+  subject   String?
+  yearGroup String?
+  groupCode String?
+  room      String?
+  notes     String?
+
+  entries TimetableEntry[]
+  coverAssignments CoverAssignment[]
+}
+
+model CommitmentCode {
+  id            String @id @default(cuid())
+  code          String @unique
+  label         String
+  category      TimetableStatus
+  coverEligible Boolean @default(false)
+  protected     Boolean @default(true)
+  description   String?
+
+  timetableEntries TimetableEntry[]
+}
+
+model TimetableEntry {
+  id                 String          @id @default(cuid())
+  timetableVersionId String
+  day                SchoolDay
+  periodId           String
+  personId           String?
+  postId             String?
+  teachingEventId    String?
+  subject            String?
+  classCodes         String[]
+  groupCode          String?
+  room               String?
+  commitmentCodeId   String?
+  status             TimetableStatus
+  sourceText         String?
+  ambiguous          Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+
+  timetableVersion TimetableVersion @relation(fields: [timetableVersionId], references: [id])
+  period           SchoolPeriod     @relation(fields: [periodId], references: [id])
+  person           Person?          @relation(fields: [personId], references: [id])
+  post             Post?            @relation(fields: [postId], references: [id])
+  teachingEvent    TeachingEvent?   @relation(fields: [teachingEventId], references: [id])
+  commitmentCode   CommitmentCode?  @relation(fields: [commitmentCodeId], references: [id])
+
+  @@index([timetableVersionId, day, periodId])
+  @@index([personId, day, periodId])
+  @@index([postId, day, periodId])
+}
+
+model LunchAllocation {
+  id        String @id @default(cuid())
+  personId  String
+  day       SchoolDay
+  periodId  String
+  active    Boolean @default(true)
+  source    String
+  notes     String?
+
+  person Person @relation(fields: [personId], references: [id])
+}
+
+model Absence {
+  id        String       @id @default(cuid())
+  personId  String
+  date      DateTime
+  scope     AbsenceScope
+  periodIds String[]
+  notes     String?
+  createdAt DateTime     @default(now())
+
+  person Person @relation(fields: [personId], references: [id])
+  coverAssignments CoverAssignment[]
+}
+
+model CoverAssignment {
+  id              String      @id @default(cuid())
+  absenceId       String
+  absentPersonId  String
+  coveringPersonId String?
+  date            DateTime
+  day             SchoolDay
+  periodId        String
+  teachingEventId String?
+  status          CoverStatus @default(UNCOVERED)
+  notes           String?
+  overrideReason  String?
+  assignedByUserId String?
+  assignedAt      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  absence        Absence @relation(fields: [absenceId], references: [id])
+  absentPerson   Person  @relation("AbsentPerson", fields: [absentPersonId], references: [id])
+  coveringPerson Person? @relation("CoveringPerson", fields: [coveringPersonId], references: [id])
+  period         SchoolPeriod @relation(fields: [periodId], references: [id])
+  teachingEvent  TeachingEvent? @relation(fields: [teachingEventId], references: [id])
+  assignedBy     AppUser? @relation("AssignedBy", fields: [assignedByUserId], references: [id])
+
+  @@unique([coveringPersonId, date, periodId])
+  @@index([absentPersonId, date])
+  @@index([date, periodId])
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entityType String
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  context   Json?
+  createdAt DateTime @default(now())
+
+  user AppUser? @relation(fields: [userId], references: [id])
+}
