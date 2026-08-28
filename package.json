@@ -8,11 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsc -p tsconfig.test.json && node .test-build/domain/availability/cover-availability-service.test.js",
+    "test": "tsc -p tsconfig.test.json && node .test-build/domain/availability/cover-availability-service.test.js && node .test-build/domain/timetable/school-date.test.js && node .test-build/domain/timetable/imported-dataset.test.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsc -p tsconfig.scripts.json && node .script-build/scripts/seed.js",
-    "import:staff-pdf": "tsc -p tsconfig.scripts.json && node .script-build/scripts/import-staff-pdf.js"
+    "import:staff-pdf": "python scripts\\import_staff_pdf.py",
+    "import:timetable": "python scripts\\import_staff_pdf.py",
+    "validate:timetable": "node scripts/validate-timetable-summary.mjs"
   },
   "dependencies": {
     "@prisma/client": "^7.10.0",

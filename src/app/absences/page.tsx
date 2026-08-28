@@ -9,7 +9,7 @@ export default function AbsencesPage() {
           <h2 className="text-xl font-semibold">Record Absence</h2>
           <div className="mt-4 space-y-3">
             <label className="block text-sm font-medium">Date<input type="date" defaultValue="2026-08-26" className="mt-1 min-h-10 w-full rounded-md border border-slate-300 px-3" /></label>
-            <label className="block text-sm font-medium">Absent staff<select className="mt-1 min-h-10 w-full rounded-md border border-slate-300 px-3" defaultValue="paul-hughes">{people.map((person) => <option key={person.id} value={person.id}>{person.displayName}</option>)}</select></label>
+            <label className="block text-sm font-medium">Absent staff<select className="mt-1 min-h-10 w-full rounded-md border border-slate-300 px-3" defaultValue="person-mr-paul-hughes">{people.map((person) => <option key={person.id} value={person.id}>{person.displayName}</option>)}</select></label>
             <label className="block text-sm font-medium">Scope<select className="mt-1 min-h-10 w-full rounded-md border border-slate-300 px-3" defaultValue="WHOLE_DAY"><option>WHOLE_DAY</option><option>PART_DAY</option><option>SINGLE_PERIOD</option></select></label>
             <button className="w-full rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Generate Requirements</button>
           </div>
@@ -32,3 +32,5 @@ export default function AbsencesPage() {
     </AppShell>
   );
 }
+
+

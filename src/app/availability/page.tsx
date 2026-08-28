@@ -8,16 +8,16 @@ export default function AvailabilityPage() {
   const period = schoolPeriods.find((item) => item.id === "L2")!;
   const results = new CoverAvailabilityService().getAvailability({
     date: "2026-08-26",
-    day: "TUESDAY",
+    day: "WEDNESDAY",
     period,
-    absentPersonId: "paul-hughes",
+    absentPersonId: "person-mr-paul-hughes",
     targetTeachingEvent: teachingEvents[0],
     people,
     timetableEntries,
     lunchAllocations,
     commitmentCodes: protectedCommitmentCodes,
     existingCover,
-    absences: [{ personId: "paul-hughes", periodIds: ["L1", "L2", "L3", "L4"] }],
+    absences: [{ personId: "person-mr-paul-hughes", periodIds: ["L1", "L2", "L3", "L4"] }],
     coverLoads,
   });
 
@@ -26,7 +26,7 @@ export default function AvailabilityPage() {
       <section className="space-y-4">
         <div>
           <h2 className="text-2xl font-semibold">Staff Availability</h2>
-          <p className="text-sm text-slate-600">Tuesday, Lesson 2. Filters are represented in the UI and wired for server-side querying.</p>
+          <p className="text-sm text-slate-600">Wednesday, Lesson 2. Filters are represented in the UI and wired for server-side querying.</p>
         </div>
         <div className="flex flex-wrap gap-3 rounded-md border border-slate-200 bg-white p-4">
           <input className="min-h-10 rounded-md border border-slate-300 px-3 text-sm" placeholder="Search staff" />
@@ -60,3 +60,4 @@ export default function AvailabilityPage() {
     </AppShell>
   );
 }
+

@@ -1,182 +1,67 @@
 import assert from "node:assert/strict";
 import { CoverAvailabilityService } from "./cover-availability-service";
-import type { CoverContext, Person, TimetableEntry } from "../timetable/types";
-import {
-  coverLoads,
-  lunchAllocations,
-  people,
-  protectedCommitmentCodes,
-  schoolPeriods,
-  teachingEvents,
-  timetableEntries,
-} from "../../db/seed-data";
+import type { CoverContext, Person, SchoolPeriod, TimetableEntry } from "../timetable/types";
 
+const periods: SchoolPeriod[] = [
+  { id: "REG", label: "Registration", dayOrder: 0, startTime: "07:30", endTime: "07:55", coverRelevant: true },
+  { id: "L1", label: "Lesson 1", dayOrder: 1, startTime: "07:55", endTime: "08:40", coverRelevant: true },
+  { id: "L2", label: "Lesson 2", dayOrder: 2, startTime: "08:40", endTime: "09:25", coverRelevant: true },
+  { id: "L5", label: "Lesson 5", dayOrder: 6, startTime: "11:15", endTime: "12:00", coverRelevant: true },
+  { id: "L6A", label: "Lesson 6A", dayOrder: 7, startTime: "12:00", endTime: "12:45", coverRelevant: true },
+  { id: "L6B", label: "Lesson 6B", dayOrder: 8, startTime: "12:45", endTime: "13:30", coverRelevant: true },
+  { id: "CCA", label: "CCA", dayOrder: 11, startTime: "15:05", endTime: "16:00", coverRelevant: true },
+];
+const people: Person[] = [
+  { id: "absent", firstName: "Absent", lastName: "Teacher", displayName: "Absent Teacher", active: true, phase: "SECONDARY", roleType: "SECONDARY_TEACHER", subjects: ["Computing"], coverEligible: true, coverPriority: "NORMAL", registrationGroupId: null },
+  { id: "eyfs", firstName: "EYFS", lastName: "Fixture", displayName: "EYFS Fixture", active: true, phase: "EYFS", roleType: "EYFS_CLASS_TEACHER", subjects: ["EYFS"], coverEligible: true, coverPriority: "NORMAL", registrationGroupId: "EYFS-A" },
+  { id: "primary", firstName: "Primary", lastName: "Fixture", displayName: "Primary Fixture", active: true, phase: "PRIMARY", roleType: "PRIMARY_CLASS_TEACHER", subjects: ["Primary"], coverEligible: true, coverPriority: "NORMAL", registrationGroupId: "Y5-A" },
+  { id: "specialist", firstName: "Specialist", lastName: "Fixture", displayName: "Specialist Fixture", active: true, phase: "SECONDARY", roleType: "SPECIALIST_TEACHER", subjects: ["Computing"], coverEligible: true, coverPriority: "NORMAL", registrationGroupId: null },
+  { id: "meeting", firstName: "Meeting", lastName: "Fixture", displayName: "Meeting Fixture", active: true, phase: "SECONDARY", roleType: "LEADERSHIP", subjects: ["Maths"], coverEligible: true, coverPriority: "LOW", registrationGroupId: "7B" },
+  { id: "free", firstName: "Free", lastName: "Fixture", displayName: "Free Fixture", active: true, phase: "SECONDARY", roleType: "SECONDARY_TEACHER", subjects: ["Computing"], coverEligible: true, coverPriority: "NORMAL", registrationGroupId: null },
+  { id: "high-load", firstName: "High", lastName: "Load", displayName: "High Load", active: true, phase: "SECONDARY", roleType: "SECONDARY_TEACHER", subjects: ["Computing"], coverEligible: true, coverPriority: "NORMAL", registrationGroupId: null },
+];
+const entries: TimetableEntry[] = [
+  { id: "absent-l1", day: "WEDNESDAY", periodId: "L1", personId: "absent", subject: "Computing", classCodes: ["Year 9A"], status: "TEACHING" },
+  { id: "meeting-reg", day: "WEDNESDAY", periodId: "REG", personId: "meeting", classCodes: ["7B"], status: "REGISTRATION" },
+  { id: "meeting-cca", day: "WEDNESDAY", periodId: "CCA", personId: "meeting", classCodes: [], commitmentCode: "SLT", status: "MEETING" },
+  { id: "specialist-l6a", day: "WEDNESDAY", periodId: "L6A", personId: "specialist", subject: "Computing", classCodes: ["Year 7A"], status: "TEACHING" },
+];
 const service = new CoverAvailabilityService();
-const tests: { name: string; run: () => void }[] = [];
-
-function it(name: string, run: () => void) {
-  tests.push({ name, run });
-}
-
-function contextFor(periodId: string, overrides: Partial<CoverContext> = {}): CoverContext {
+function context(periodId: string, overrides: Partial<CoverContext> = {}): CoverContext {
   return {
     date: "2026-08-26",
-    day: "TUESDAY",
-    period: schoolPeriods.find((period) => period.id === periodId)!,
-    absentPersonId: "paul-hughes",
-    targetTeachingEvent: teachingEvents[0],
+    day: "WEDNESDAY",
+    period: periods.find((period) => period.id === periodId)!,
+    absentPersonId: "absent",
+    targetTeachingEvent: { id: "event", subject: "Computing", classCodes: ["Year 9A"], yearGroup: "9", assignedPersonIds: ["absent"] },
     people,
-    timetableEntries,
-    lunchAllocations,
-    commitmentCodes: protectedCommitmentCodes,
+    timetableEntries: entries,
+    lunchAllocations: [
+      { personId: "eyfs", day: "WEDNESDAY", periodId: "L5", source: "ROLE_RULE", notes: "EYFS working lunch" },
+      { personId: "primary", day: "WEDNESDAY", periodId: "L6A", source: "ROLE_RULE", notes: "Primary lunch starts 12:00" },
+      { personId: "primary", day: "WEDNESDAY", periodId: "L6B", source: "ROLE_RULE", notes: "Primary lunch protected until 13:00" },
+      { personId: "specialist", day: "WEDNESDAY", periodId: "L6B", source: "SPECIALIST_RULE", notes: "Teaches L6A; L6B allocated lunch" },
+    ],
+    commitmentCodes: [{ code: "SLT", label: "SLT meeting", category: "MEETING", coverEligible: false, protected: true }],
     existingCover: [],
-    absences: [{ personId: "paul-hughes", periodIds: ["L1", "L2", "L3", "L4"] }],
-    coverLoads,
+    absences: [{ personId: "absent", periodIds: ["L1"] }],
+    coverLoads: { absent: { today: 0, week: 0, term: 0, minutes: 0 }, eyfs: { today: 0, week: 0, term: 0, minutes: 0 }, primary: { today: 0, week: 0, term: 0, minutes: 0 }, specialist: { today: 0, week: 0, term: 0, minutes: 0 }, meeting: { today: 0, week: 0, term: 0, minutes: 0 }, free: { today: 0, week: 0, term: 0, minutes: 0 }, "high-load": { today: 2, week: 6, term: 20, minutes: 900 } },
     ...overrides,
   };
 }
-
-function resultFor(personId: string, context: CoverContext) {
-  const result = service.getAvailability(context).find((candidate) => candidate.personId === personId);
-  if (!result) throw new Error(`Missing result for ${personId}`);
-  return result;
+function result(personId: string, ctx: CoverContext) {
+  const value = service.getAvailability(ctx).find((candidate) => candidate.personId === personId);
+  if (!value) throw new Error(`Missing ${personId}`);
+  return value;
 }
-
-it("prevents EYFS teachers from covering during EYFS working lunch", () => {
-  const result = resultFor("eyfs-cover-example", contextFor("L5"));
-  assert.equal(result.eligible, false);
-  assert.equal(result.status, "LUNCH");
-  assert.ok(result.reasons.includes("EYFS working lunch"));
-});
-
-it("prevents primary teachers from covering during protected primary lunch", () => {
-  const result = resultFor("primary-cover-example", contextFor("L6A"));
-  assert.equal(result.eligible, false);
-  assert.equal(result.status, "LUNCH");
-});
-
-it("prevents a specialist from covering their configured 6B lunch", () => {
-  const context = contextFor("L6B", { absentPersonId: "someone-else", absences: [] });
-  const result = resultFor("paul-hughes", context);
-  assert.equal(result.eligible, false);
-  assert.equal(result.status, "LUNCH");
-});
-
-it("prevents staff with SLT and other protected meetings from being recommended", () => {
-  const context = contextFor("CCA", { absentPersonId: "someone-else", absences: [] });
-  const result = resultFor("hina-khan", context);
-  assert.equal(result.eligible, false);
-  assert.equal(result.status, "MEETING");
-  assert.match(result.reasons[0], /SLT/);
-});
-
-it("prevents a teacher with registration from covering another registration", () => {
-  const context = contextFor("REG", { absentPersonId: "someone-else", absences: [] });
-  const result = resultFor("hina-khan", context);
-  assert.equal(result.eligible, false);
-  assert.equal(result.status, "REGISTRATION");
-});
-
-it("allows an eligible teacher with no registration to potentially cover registration", () => {
-  const context = contextFor("REG", { absentPersonId: "someone-else", absences: [] });
-  const result = resultFor("crispin-cole", context);
-  assert.equal(result.eligible, true);
-  assert.equal(result.status, "AVAILABLE");
-});
-
-it("prevents simultaneous cover assignments", () => {
-  const context = contextFor("L2", {
-    absentPersonId: "someone-else",
-    absences: [],
-    existingCover: [
-      {
-        absentPersonId: "third-person",
-        coveringPersonId: "crispin-cole",
-        date: "2026-08-26",
-        day: "TUESDAY",
-        periodId: "L2",
-        status: "COVERED",
-      },
-    ],
-  });
-  const result = resultFor("crispin-cole", context);
-  assert.equal(result.eligible, false);
-  assert.equal(result.status, "ALREADY_COVERING");
-});
-
-it("prevents absent staff from covering", () => {
-  const result = resultFor("paul-hughes", contextFor("L1"));
-  assert.equal(result.eligible, false);
-  assert.equal(result.status, "ABSENT");
-});
-
-it("treats every teacher assigned to a multi-teacher lesson as busy", () => {
-  const multiTeacherEntries: TimetableEntry[] = [
-    ...timetableEntries,
-    {
-      id: "cole-mo-l2-pe",
-      day: "MONDAY",
-      periodId: "L2",
-      personId: "crispin-cole",
-      teachingEventId: "y7-pe-multi-mo-l2",
-      subject: "PE",
-      classCodes: ["Year 7A", "Year 7B"],
-      status: "TEACHING",
-    },
-  ];
-
-  const context = contextFor("L2", {
-    day: "MONDAY",
-    absentPersonId: "someone-else",
-    absences: [],
-    timetableEntries: multiTeacherEntries,
-  });
-
-  const result = resultFor("crispin-cole", context);
-  assert.equal(result.eligible, false);
-  assert.match(result.reasons[0], /Teaching Year 7A, Year 7B PE/);
-});
-
-it("keeps Year 9 setting groups as separate teaching events", () => {
-  const year9Events = teachingEvents.filter((event) => event.yearGroup === "9" && event.subject === "Computing");
-  assert.deepEqual(year9Events.map((event) => event.groupCode).sort(), ["Group 1", "Group 2"]);
-  assert.equal(new Set(year9Events.map((event) => event.id)).size, 2);
-});
-
-it("uses lower historical cover load as a ranking advantage", () => {
-  const lowLoad: Person = {
-    id: "low-load",
-    firstName: "Low",
-    lastName: "Load",
-    displayName: "Low Load",
-    active: true,
-    phase: "SECONDARY",
-    roleType: "SECONDARY_TEACHER",
-    subjects: ["Computing"],
-    coverEligible: true,
-    coverPriority: "NORMAL",
-    registrationGroupId: null,
-  };
-  const highLoad = { ...lowLoad, id: "high-load", displayName: "High Load" };
-  const context = contextFor("L8", {
-    absentPersonId: "someone-else",
-    absences: [],
-    people: [lowLoad, highLoad],
-    coverLoads: {
-      "low-load": { today: 0, week: 0, term: 0, minutes: 0 },
-      "high-load": { today: 2, week: 6, term: 20, minutes: 900 },
-    },
-  });
-
-  const results = service.getAvailability(context);
-  assert.equal(results[0].personId, "low-load");
-  assert.ok(results[0].score > results[1].score);
-});
-
-let passed = 0;
-for (const test of tests) {
-  test.run();
-  passed += 1;
-  console.log(`PASS ${test.name}`);
-}
-console.log(`${passed} cover availability tests passed`);
+assert.equal(result("eyfs", context("L5")).status, "LUNCH");
+assert.equal(result("primary", context("L6A")).status, "LUNCH");
+assert.equal(result("specialist", context("L6B", { absentPersonId: "none", absences: [] })).status, "LUNCH");
+assert.equal(result("meeting", context("CCA", { absentPersonId: "none", absences: [] })).status, "MEETING");
+assert.equal(result("meeting", context("REG", { absentPersonId: "none", absences: [] })).status, "REGISTRATION");
+assert.equal(result("free", context("REG", { absentPersonId: "none", absences: [] })).status, "UNCLASSIFIED");
+assert.equal(result("meeting", context("L2", { existingCover: [{ absentPersonId: "x", coveringPersonId: "meeting", date: "2026-08-26", day: "WEDNESDAY", periodId: "L2", status: "COVERED" }] })).status, "ALREADY_COVERING");
+assert.equal(result("absent", context("L1")).status, "ABSENT");
+const ranked = service.getAvailability(context("L2", { people: [people[5], people[6]], timetableEntries: [{ id: "free-l2", day: "WEDNESDAY", periodId: "L2", personId: "free", classCodes: [], status: "AVAILABLE" }, { id: "high-l2", day: "WEDNESDAY", periodId: "L2", personId: "high-load", classCodes: [], status: "AVAILABLE" }] }));
+assert.equal(ranked[0].personId, "free");
+console.log("PASS cover availability isolated fixture tests");

@@ -16,8 +16,8 @@ import {
 export default function Dashboard() {
   const service = new CoverAvailabilityService();
   const requirements = getCoverRequirementsForPerson({
-    personId: "paul-hughes",
-    day: "TUESDAY",
+    personId: "person-mr-paul-hughes",
+    day: "WEDNESDAY",
     periods: schoolPeriods,
     entries: timetableEntries,
     teachingEvents,
@@ -27,16 +27,16 @@ export default function Dashboard() {
   const recommendations = service
     .getAvailability({
       date: "2026-08-26",
-      day: "TUESDAY",
+      day: "WEDNESDAY",
       period: currentPeriod,
-      absentPersonId: "paul-hughes",
+      absentPersonId: "person-mr-paul-hughes",
       targetTeachingEvent: teachingEvents[0],
       people,
       timetableEntries,
       lunchAllocations,
       commitmentCodes: protectedCommitmentCodes,
       existingCover,
-      absences: [{ personId: "paul-hughes", periodIds: requiredCover.map((item) => item.period.id) }],
+      absences: [{ personId: "person-mr-paul-hughes", periodIds: requiredCover.map((item) => item.period.id) }],
       coverLoads,
     })
     .filter((candidate) => candidate.eligible);
@@ -67,7 +67,7 @@ export default function Dashboard() {
           <div className="rounded-md border border-slate-200 bg-white">
             <div className="border-b border-slate-200 px-5 py-4">
               <h2 className="text-lg font-semibold">Absence Workflow</h2>
-              <p className="text-sm text-slate-600">Whole-day absence selected for Mr Paul Hughes on Tuesday.</p>
+              <p className="text-sm text-slate-600">Whole-day absence selected for Mr Paul Hughes on Wednesday.</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -129,3 +129,4 @@ export default function Dashboard() {
     </AppShell>
   );
 }
+

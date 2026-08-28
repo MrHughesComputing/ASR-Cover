@@ -75,6 +75,10 @@ export class CoverAvailabilityService {
       return { ...base, eligible: false, status: "LUNCH", reasons: [lunch.notes ?? "Allocated lunch"] };
     }
 
+    if (!entry) {
+      return { ...base, eligible: false, status: "UNCLASSIFIED", reasons: ["No explicit availability classification"] };
+    }
+
     if (entry) {
       const protectedCode = entry.commitmentCode
         ? context.commitmentCodes.find((code) => code.code === entry.commitmentCode)
@@ -167,3 +171,4 @@ export class CoverAvailabilityService {
     return Math.max(0, Math.min(100, score));
   }
 }
+
